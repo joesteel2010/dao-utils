@@ -9,6 +9,8 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.metamodel.spi.MetamodelImplementor;
 import uk.co.jste.daoutils.entity.Persistable;
 
 @SuppressWarnings({"unused", "unchecked", "WeakerAccess", "squid:S1905"})
@@ -30,10 +32,12 @@ public abstract class AbstractPersistentEntityDao<T extends Persistable<I>, I ex
 
   @Override
   public <S extends T> Optional<S> get(I id, Class<S> targetEntityClass) {
+    SessionFactory sessionFactory = getSession().getSessionFactory();
     CriteriaBuilder builder = getSession().getCriteriaBuilder();
     CriteriaQuery<S> criteria = builder.createQuery(targetEntityClass);
-    Root<S> root = criteria.from(targetEntityClass);
-    criteria.where(builder.equal(root.get("id"), id));
+    String idField = ((MetamodelImplementor)sessionFactory.getMetamodel()).entityPersister(getEntityClass()).getIdentifierPropertyName();
+    Root<T> root = criteria.from(getEntityClass());
+    criteria.where(builder.equal(root.get(idField), id));
     List<S> resultList = getSession().createQuery(criteria).getResultList();
     if (resultList.size() > 1) {
       throw new NonUniqueResultException();
@@ -43,10 +47,12 @@ public abstract class AbstractPersistentEntityDao<T extends Persistable<I>, I ex
 
   @Override
   public Optional<T> get(I id) {
+    SessionFactory sessionFactory = getSession().getSessionFactory();
     CriteriaBuilder builder = getSession().getCriteriaBuilder();
     CriteriaQuery<T> criteria = builder.createQuery(getEntityClass());
+    String idField = ((MetamodelImplementor)sessionFactory.getMetamodel()).entityPersister(getEntityClass()).getIdentifierPropertyName();
     Root<T> root = criteria.from(getEntityClass());
-    criteria.where(builder.equal(root.get("id"), id));
+    criteria.where(builder.equal(root.get(idField), id));
     List<T> resultList = getSession().createQuery(criteria).getResultList();
     if (resultList.size() > 1) {
       throw new NonUniqueResultException();
